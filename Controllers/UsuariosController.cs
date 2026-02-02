@@ -34,7 +34,7 @@ namespace TransparenciaBot.Controllers
         public async Task<IActionResult> GetUsuariosRastreando(int politicoId)
         {
             var assinantes = await _context.Usuarios
-                .Where(u => u.PoliticoFavoritoId == politicoId)
+                .Where(u => u.PoliticoId == politicoId) 
                 .ToListAsync();
 
             if (assinantes.Count == 0)
@@ -46,7 +46,7 @@ namespace TransparenciaBot.Controllers
         }
 
         [HttpDelete("{id}")]
-            public async Task<IActionResult> DeleteUsuario(int id)
+        public async Task<IActionResult> DeleteUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);
             if (usuario == null) return NotFound();

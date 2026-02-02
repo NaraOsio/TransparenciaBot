@@ -132,3 +132,4 @@ C:\TransparenciaBot\obj\Debug\net8.0\refint\TransparenciaBot.dll
 C:\TransparenciaBot\obj\Debug\net8.0\TransparenciaBot.pdb
 C:\TransparenciaBot\obj\Debug\net8.0\TransparenciaBot.genruntimeconfig.cache
 C:\TransparenciaBot\obj\Debug\net8.0\ref\TransparenciaBot.dll
+C:\TransparenciaBot\obj\Debug\net8.0\TransparenciaBot.sourcelink.json
