@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TransparenciaBot")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7124117d03edb8847a18fd9d0dc89a22a98b7fb9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+138b5fa5a9042d361d3cc79c45eb2232a9988498")]
 [assembly: System.Reflection.AssemblyProductAttribute("TransparenciaBot")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TransparenciaBot")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
