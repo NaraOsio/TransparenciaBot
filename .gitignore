@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+
+# Local settings and secrets
+appsettings.Development.json
+appsettings.Production.json
+*.user
+*.suo
+.vs/
+
+# Local database / tools
+.env
+*.db
+
