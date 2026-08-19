@@ -13,6 +13,7 @@ builder.Services.AddDbContext<TransparenciaBotDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IRegistroMensagemServico, RegistroMensagemServico>();
 builder.Services.AddScoped<ConsultaGastosBancoServico>();
+builder.Services.AddScoped<FormatadorRespostaGastosServico>();
 builder.Services.AddHttpClient<ConsultaCamaraServico>(cliente =>
 {
     cliente.BaseAddress = new Uri("https://dadosabertos.camara.leg.br/");

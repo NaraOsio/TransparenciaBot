@@ -7,7 +7,8 @@ namespace TransparenciaBot.Controladores;
 [Route("api/camara")]
 public class CamaraController(
     ConsultaCamaraServico consultaCamaraServico,
-    ConsultaGastosBancoServico consultaGastosBancoServico)
+    ConsultaGastosBancoServico consultaGastosBancoServico,
+    FormatadorRespostaGastosServico formatadorRespostaGastosServico)
     : ControllerBase
 {
     [HttpGet("deputado")]
@@ -76,8 +77,11 @@ public class CamaraController(
             });
         }
 
+        var mensagem = formatadorRespostaGastosServico.CriarMensagem(resumo);
+
         return Ok(new
         {
+            mensagem,
             deputadoId = resumo.DeputadoId,
             ano = resumo.Ano,
             quantidadeDeDespesas = resumo.QuantidadeDeGastos,
