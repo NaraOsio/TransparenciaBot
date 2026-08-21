@@ -61,8 +61,20 @@ public class CamaraController(
             });
         }
 
-        var resumo = await consultaGastosBancoServico.ConsultarAsync(
+        var deputado = await consultaCamaraServico.BuscarDeputadoPorIdAsync(
             id,
+            cancellationToken);
+
+        if (deputado is null)
+        {
+            return NotFound(new
+            {
+                mensagem = "Deputado não encontrado na fonte pública da Câmara."
+            });
+        }
+
+        var resumo = await consultaGastosBancoServico.ConsultarAsync(
+            deputado.Nome,
             ano,
             cancellationToken);
 
@@ -82,7 +94,7 @@ public class CamaraController(
         return Ok(new
         {
             mensagem,
-            deputadoId = resumo.DeputadoId,
+            deputadoId = deputado.Id,
             ano = resumo.Ano,
             quantidadeDeDespesas = resumo.QuantidadeDeGastos,
             totalGasto = resumo.TotalGasto,

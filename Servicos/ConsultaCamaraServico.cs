@@ -4,6 +4,20 @@ namespace TransparenciaBot.Servicos;
 
 public class ConsultaCamaraServico(HttpClient httpClient)
 {
+    public async Task<DeputadoCamara?> BuscarDeputadoPorIdAsync(
+        int deputadoId,
+        CancellationToken cancellationToken)
+    {
+        var endereco = $"api/v2/deputados/{deputadoId}";
+
+        var resposta = await httpClient.GetFromJsonAsync<
+            RespostaDetalheCamara<DeputadoCamara>>(
+                endereco,
+                cancellationToken);
+
+        return resposta?.Dados;
+    }
+
     public async Task<DeputadoCamara?> BuscarDeputadoPorNomeAsync(
         string nome,
         CancellationToken cancellationToken)
@@ -11,13 +25,17 @@ public class ConsultaCamaraServico(HttpClient httpClient)
         var endereco =
             $"api/v2/deputados?nome={Uri.EscapeDataString(nome)}&ordem=ASC&ordenarPor=nome&itens=10";
 
-        var resposta = await httpClient.GetFromJsonAsync<RespostaCamara<DeputadoCamara>>(
-            endereco,
-            cancellationToken);
+        var resposta = await httpClient.GetFromJsonAsync<
+            RespostaCamara<DeputadoCamara>>(
+                endereco,
+                cancellationToken);
 
         return resposta?.Dados
             .FirstOrDefault(deputado =>
-                string.Equals(deputado.Nome, nome, StringComparison.OrdinalIgnoreCase))
+                string.Equals(
+                    deputado.Nome,
+                    nome,
+                    StringComparison.OrdinalIgnoreCase))
             ?? resposta?.Dados.FirstOrDefault();
     }
 
@@ -34,9 +52,10 @@ public class ConsultaCamaraServico(HttpClient httpClient)
             var endereco =
                 $"api/v2/deputados/{deputadoId}/despesas?ano={ano}&ordem=ASC&ordenarPor=mes&itens=100&pagina={pagina}";
 
-            var resposta = await httpClient.GetFromJsonAsync<RespostaCamara<DespesaCamara>>(
-                endereco,
-                cancellationToken);
+            var resposta = await httpClient.GetFromJsonAsync<
+                RespostaCamara<DespesaCamara>>(
+                    endereco,
+                    cancellationToken);
 
             var despesasDaPagina = resposta?.Dados ?? [];
 
@@ -62,6 +81,11 @@ public class ConsultaCamaraServico(HttpClient httpClient)
 public class RespostaCamara<T>
 {
     public List<T> Dados { get; set; } = [];
+}
+
+public class RespostaDetalheCamara<T>
+{
+    public T? Dados { get; set; }
 }
 
 public class DeputadoCamara

@@ -1,10 +1,8 @@
 # TransparenciaBot
 
-Este projeto está sendo desenvolvido como Trabalho de Conclusão de Curso (TCC) do curso de Análise e Desenvolvimento de Sistemas da Ulbra.
+Projeto de Trabalho de Conclusão de Curso (TCC) do curso de Análise e Desenvolvimento de Sistemas da Ulbra.
 
-O TransparenciaBot é um chatbot integrado ao WhatsApp. A proposta é facilitar o acesso do cidadão a informações públicas sobre deputados federais, principalmente dados de identificação e gastos parlamentares.
-
-A ideia é simples: a pessoa faz uma pergunta pelo WhatsApp, o sistema consulta uma fonte oficial da Câmara dos Deputados e devolve uma resposta clara, indicando a origem da informação.
+O TransparenciaBot é um chatbot integrado ao WhatsApp para facilitar o acesso do cidadão a informações públicas sobre deputados federais. O sistema recebe uma pergunta, consulta fontes oficiais e envia uma resposta clara, indicando a origem dos dados.
 
 ## Tecnologias utilizadas
 
@@ -14,23 +12,126 @@ A ideia é simples: a pessoa faz uma pergunta pelo WhatsApp, o sistema consulta 
 - Entity Framework Core
 - API de Dados Abertos da Câmara dos Deputados
 - WhatsApp Business Cloud API
+- ngrok
 - Git e GitHub
 
-## O que já foi desenvolvido
+## Funcionalidades
 
-- API criada em ASP.NET Core.
-- Banco de dados PostgreSQL configurado.
-- Tabelas para usuários, mensagens, falhas de processamento e gastos.
-- Registro de mensagens com telefone protegido por hash.
-- Consulta de deputado por nome na API da Câmara.
-- Importação do arquivo anual oficial de cotas parlamentares da Câmara.
-- Consulta de gastos armazenados no banco de dados.
-- Retorno da quantidade de gastos, total gasto e maiores despesas.
-- Estrutura inicial do webhook do WhatsApp.
-- Preparação de uma resposta em linguagem clara para o cidadão.
+- Receber mensagens enviadas ao WhatsApp do projeto.
+- Registrar mensagens no banco de dados.
+- Registrar o estado: `Recebida`, `EmProcessamento`, `Respondida` ou `Falhou`.
+- Consultar dados cadastrais de deputados federais.
+- Consultar gastos parlamentares importados da fonte oficial da Câmara.
+- Retornar respostas em linguagem clara e com indicação de fonte.
+- Registrar falhas de processamento.
+- Evitar resposta duplicada caso a Meta reenvie o mesmo evento.
 
-## Como funciona atualmente
+## Consultas disponíveis
+
+Envie uma destas mensagens para o WhatsApp do projeto:
 
 ```text
-Consulta → API do TransparenciaBot → Banco de dados →
-dados oficiais da Câmara → resposta da API
+AJUDA
+dados do deputado Erika Hilton
+gastos do deputado Erika Hilton em 2025
+gastos do deputado Kim Kataguiri
+```
+
+Na consulta de gastos sem ano, o sistema utiliza o último ano disponível na base local.
+
+## Fontes públicas
+
+- API de Dados Abertos da Câmara dos Deputados: dados cadastrais.
+- Arquivo anual oficial de cotas parlamentares da Câmara dos Deputados: gastos parlamentares.
+
+## Pré-requisitos
+
+- .NET SDK 8
+- PostgreSQL
+- Conta configurada na WhatsApp Business Cloud API
+- ngrok instalado para testes locais
+
+## Configuração local
+
+1. Crie o arquivo:
+
+```text
+appsettings.Development.json
+```
+
+2. Use `appsettings.Development.example.json` como modelo.
+
+3. Preencha a senha local do PostgreSQL e as configurações da Meta.
+
+4. Aplique as migrations:
+
+```powershell
+dotnet ef database update
+```
+
+## Importação de gastos
+
+Para a primeira importação de um ano:
+
+```powershell
+dotnet run -- --importar-gastos 2025
+```
+
+Para substituir com segurança os gastos já importados de um ano:
+
+```powershell
+dotnet run -- --reimportar-gastos 2025
+```
+
+A reimportação substitui somente os registros de gastos do ano informado.
+
+## Execução local
+
+No terminal, dentro da pasta do projeto:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run
+```
+
+A aplicação ficará disponível em:
+
+```text
+http://localhost:5000
+```
+
+Em outro terminal:
+
+```powershell
+ngrok http 5000
+```
+
+No painel da Meta, configure a URL do webhook com o final:
+
+```text
+/api/whatsapp/webhook
+```
+
+Exemplo:
+
+```text
+https://sua-url-ngrok.ngrok-free.dev/api/whatsapp/webhook
+```
+
+## Segurança
+
+O arquivo `appsettings.Development.json` contém credenciais locais e não deve ser enviado ao GitHub, incluído em arquivos `.zip`, artigo ou apresentação.
+
+O telefone do usuário é registrado apenas como hash, sem guardar o número original.
+
+## Fluxo do sistema
+
+```text
+WhatsApp
+→ Webhook do TransparenciaBot
+→ Registro da mensagem no PostgreSQL
+→ Interpretação da consulta
+→ Consulta à API da Câmara ou à base local de gastos
+→ Resposta clara com fonte
+→ Envio da resposta pelo WhatsApp
+```

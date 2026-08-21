@@ -5,6 +5,8 @@ public class Gasto
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public int IdDeputadoCamara { get; set; }
+    public string NomeParlamentar { get; set; } = string.Empty;
+
     public int Ano { get; set; }
     public int Mes { get; set; }
 

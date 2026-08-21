@@ -7,15 +7,17 @@ public class ConsultaGastosBancoServico(
     TransparenciaBotDbContext dbContext)
 {
     public async Task<ResumoGastosDeputado?> ConsultarAsync(
-        int deputadoId,
+        string nomeParlamentar,
         int ano,
         CancellationToken cancellationToken)
     {
+        var nomeNormalizado = nomeParlamentar.Trim().ToUpper();
+
         var consulta = dbContext.Gastos
             .AsNoTracking()
             .Where(gasto =>
-                gasto.IdDeputadoCamara == deputadoId &&
-                gasto.Ano == ano);
+                gasto.Ano == ano &&
+                gasto.NomeParlamentar.ToUpper() == nomeNormalizado);
 
         var quantidadeDeGastos = await consulta.CountAsync(
             cancellationToken);
@@ -46,18 +48,33 @@ public class ConsultaGastosBancoServico(
 
         return new ResumoGastosDeputado
         {
-            DeputadoId = deputadoId,
+            NomeParlamentar = nomeParlamentar,
             Ano = ano,
             QuantidadeDeGastos = quantidadeDeGastos,
             TotalGasto = totalGasto,
             MaioresDespesas = maioresDespesas
         };
     }
+
+    public async Task<int?> ObterUltimoAnoDisponivelAsync(
+        string nomeParlamentar,
+        CancellationToken cancellationToken)
+    {
+        var nomeNormalizado = nomeParlamentar.Trim().ToUpper();
+
+        return await dbContext.Gastos
+            .AsNoTracking()
+            .Where(gasto =>
+                gasto.NomeParlamentar.ToUpper() == nomeNormalizado)
+            .MaxAsync(
+                gasto => (int?)gasto.Ano,
+                cancellationToken);
+    }
 }
 
 public class ResumoGastosDeputado
 {
-    public int DeputadoId { get; set; }
+    public string NomeParlamentar { get; set; } = string.Empty;
     public int Ano { get; set; }
     public int QuantidadeDeGastos { get; set; }
     public decimal TotalGasto { get; set; }

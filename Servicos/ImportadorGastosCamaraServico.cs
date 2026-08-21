@@ -11,30 +11,97 @@ public class ImportadorGastosCamaraServico(
     HttpClient httpClient,
     TransparenciaBotDbContext dbContext,
     ILogger<ImportadorGastosCamaraServico> logger)
-
 {
-   private static DateTime? ConverterData(string? dataTexto)
-{
-    if (!DateTime.TryParse(dataTexto, out var data))
+    public Task<int> ImportarAnoAsync(
+        int ano,
+        CancellationToken cancellationToken)
     {
-        return null;
+        return ImportarAnoInternoAsync(
+            ano,
+            substituirDadosExistentes: false,
+            cancellationToken);
     }
 
-    return DateTime.SpecifyKind(data, DateTimeKind.Utc);
-}    public async Task<int> ImportarAnoAsync(
+    public Task<int> ReimportarAnoAsync(
         int ano,
+        CancellationToken cancellationToken)
+    {
+        return ImportarAnoInternoAsync(
+            ano,
+            substituirDadosExistentes: true,
+            cancellationToken);
+    }
+
+    private async Task<int> ImportarAnoInternoAsync(
+        int ano,
+        bool substituirDadosExistentes,
         CancellationToken cancellationToken)
     {
         var jaImportado = await dbContext.Gastos.AnyAsync(
             gasto => gasto.Ano == ano,
             cancellationToken);
 
-        if (jaImportado)
+        if (jaImportado && !substituirDadosExistentes)
         {
             throw new InvalidOperationException(
                 $"O ano {ano} já foi importado.");
         }
 
+        var novosGastos = await BaixarGastosDoAnoAsync(
+            ano,
+            cancellationToken);
+
+        if (novosGastos.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"O arquivo oficial de {ano} não possui gastos válidos para importar.");
+        }
+
+        await using var transacao = await dbContext.Database.BeginTransactionAsync(
+            cancellationToken);
+
+        try
+        {
+            var quantidadeRemovida = 0;
+
+            if (substituirDadosExistentes)
+            {
+                quantidadeRemovida = await dbContext.Gastos
+                    .Where(gasto => gasto.Ano == ano)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+
+            foreach (var lote in novosGastos.Chunk(1_000))
+            {
+                dbContext.Gastos.AddRange(lote);
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+
+                dbContext.ChangeTracker.Clear();
+            }
+
+            await transacao.CommitAsync(cancellationToken);
+
+            logger.LogInformation(
+                "{Quantidade} gastos de {Ano} foram importados. " +
+                "{QuantidadeRemovida} gastos antigos foram substituídos.",
+                novosGastos.Count,
+                ano,
+                quantidadeRemovida);
+
+            return novosGastos.Count;
+        }
+        catch
+        {
+            await transacao.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task<List<Gasto>> BaixarGastosDoAnoAsync(
+        int ano,
+        CancellationToken cancellationToken)
+    {
         var endereco =
             $"https://www.camara.leg.br/cotas/Ano-{ano}.json.zip";
 
@@ -45,15 +112,16 @@ public class ImportadorGastosCamaraServico(
 
         resposta.EnsureSuccessStatusCode();
 
-        await using var arquivoZip = await resposta.Content.ReadAsStreamAsync(
-            cancellationToken);
+        await using var arquivoZip =
+            await resposta.Content.ReadAsStreamAsync(cancellationToken);
 
         using var zip = new ZipArchive(
             arquivoZip,
             ZipArchiveMode.Read);
 
         var arquivoJson = zip.Entries.FirstOrDefault(
-            arquivo => arquivo.Name.EndsWith(".json",
+            arquivo => arquivo.Name.EndsWith(
+                ".json",
                 StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException(
                 "O arquivo oficial não contém dados JSON.");
@@ -66,28 +134,23 @@ public class ImportadorGastosCamaraServico(
             NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
 
-        var arquivo = await JsonSerializer.DeserializeAsync<RespostaArquivoGastosCamara>(
-     conteudoJson,
-     opcoesJson,
-     cancellationToken)
-     ?? throw new InvalidOperationException(
-         "Não foi possível ler os gastos do arquivo oficial da Câmara.");
+        var arquivo =
+            await JsonSerializer.DeserializeAsync<RespostaArquivoGastosCamara>(
+                conteudoJson,
+                opcoesJson,
+                cancellationToken)
+            ?? throw new InvalidOperationException(
+                "Não foi possível ler os gastos do arquivo oficial da Câmara.");
 
-        var quantidadeImportada = 0;
-        var lote = new List<Gasto>();
-
-        foreach (var registro in arquivo.Dados)
-        {
-
-            if (registro is null || registro.Ano != ano ||
-                registro.IdDeputadoCamara == 0)
-            {
-                continue;
-            }
-
-            lote.Add(new Gasto
+        return arquivo.Dados
+            .Where(registro =>
+                registro is not null &&
+                registro.Ano == ano &&
+                registro.IdDeputadoCamara != 0)
+            .Select(registro => new Gasto
             {
                 IdDeputadoCamara = registro.IdDeputadoCamara,
+                NomeParlamentar = registro.NomeParlamentar ?? "Não informado",
                 Ano = registro.Ano,
                 Mes = registro.Mes,
                 TipoDespesa = registro.TipoDespesa ?? "Não informado",
@@ -96,50 +159,34 @@ public class ImportadorGastosCamaraServico(
                 NomeFornecedor = registro.NomeFornecedor ?? "Não informado",
                 DataDocumento = ConverterData(registro.DataDocumento),
                 UrlDocumento = registro.UrlDocumento
-            });
-
-            if (lote.Count < 1_000)
-            {
-                continue;
-            }
-
-            await SalvarLoteAsync(lote, cancellationToken);
-            quantidadeImportada += lote.Count;
-            lote.Clear();
-        }
-
-        if (lote.Count > 0)
-        {
-            await SalvarLoteAsync(lote, cancellationToken);
-            quantidadeImportada += lote.Count;
-        }
-
-        logger.LogInformation(
-            "{Quantidade} gastos de {Ano} foram importados.",
-            quantidadeImportada,
-            ano);
-
-        return quantidadeImportada;
+            })
+            .ToList();
     }
 
-    private async Task SalvarLoteAsync(
-        List<Gasto> lote,
-        CancellationToken cancellationToken)
+    private static DateTime? ConverterData(string? dataTexto)
     {
-        dbContext.Gastos.AddRange(lote);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        dbContext.ChangeTracker.Clear();
+        if (!DateTime.TryParse(dataTexto, out var data))
+        {
+            return null;
+        }
+
+        return DateTime.SpecifyKind(data, DateTimeKind.Utc);
     }
 }
+
 public class RespostaArquivoGastosCamara
 {
     [JsonPropertyName("dados")]
     public List<RegistroGastoArquivoCamara> Dados { get; set; } = [];
 }
+
 public class RegistroGastoArquivoCamara
 {
     [JsonPropertyName("numeroDeputadoID")]
     public int IdDeputadoCamara { get; set; }
+
+    [JsonPropertyName("nomeParlamentar")]
+    public string? NomeParlamentar { get; set; }
 
     [JsonPropertyName("ano")]
     public int Ano { get; set; }
