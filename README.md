@@ -124,6 +124,30 @@ O arquivo `appsettings.Development.json` contém credenciais locais e não deve 
 
 O telefone do usuário é registrado apenas como hash, sem guardar o número original.
 
+## Publicação na Render
+
+O projeto pode ser publicado na Render usando o `Dockerfile` incluído no repositório.
+
+1. Crie um PostgreSQL gerenciado na Render.
+2. Crie um **Web Service** conectado ao repositório GitHub do projeto. A Render identificará o `Dockerfile`.
+3. Cadastre as variáveis de ambiente no painel da Render. Nunca crie ou envie um arquivo `appsettings.Production.json` com dados reais para o GitHub.
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+ConnectionStrings__TransparenciaBotDb=STRING_DE_CONEXAO_DO_POSTGRES
+WhatsApp__VerifyToken=SEU_VERIFY_TOKEN
+WhatsApp__AccessToken=SEU_ACCESS_TOKEN_DA_META
+WhatsApp__PhoneNumberId=SEU_PHONE_NUMBER_ID_DA_META
+Aplicacao__AplicarMigrationsAoIniciar=true
+```
+
+4. No primeiro deploy, mantenha `Aplicacao__AplicarMigrationsAoIniciar=true` para criar as tabelas no banco novo. Após a confirmação do deploy, altere-a para `false` e faça novo deploy.
+5. Use `GET /api/health` como Health Check Path.
+6. Após a publicação, configure no painel da Meta a URL pública final seguida de `/api/whatsapp/webhook`.
+7. Importe os gastos do ano no banco publicado antes de testar consultas de despesas.
+
+O arquivo `render.yaml` contém apenas nomes de variáveis e não contém segredos.
+
 ## Fluxo do sistema
 
 ```text

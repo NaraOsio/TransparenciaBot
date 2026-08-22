@@ -4,6 +4,13 @@ using TransparenciaBot.Servicos;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var portaRender = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrWhiteSpace(portaRender))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{portaRender}");
+}
+
 var connectionString = builder.Configuration.GetConnectionString(
     "TransparenciaBotDb")
     ?? throw new InvalidOperationException(
@@ -68,7 +75,21 @@ if (args.Length == 2 &&
     return;
 }
 
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue<bool>(
+    "Aplicacao:AplicarMigrationsAoIniciar"))
+{
+    using var escopo = app.Services.CreateScope();
+    var dbContext = escopo.ServiceProvider
+        .GetRequiredService<TransparenciaBotDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+}
+
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+
 app.MapControllers();
 
 app.Run();
