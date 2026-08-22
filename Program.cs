@@ -105,6 +105,29 @@ if (builder.Configuration.GetValue<bool>(
 
     await dbContext.Database.MigrateAsync();
 }
+var anoParaImportarAoIniciar = builder.Configuration.GetValue<int?>(
+    "Aplicacao:AnoParaImportarAoIniciar");
+
+if (anoParaImportarAoIniciar is int ano)
+{
+    using var escopo = app.Services.CreateScope();
+
+    var dbContext = escopo.ServiceProvider
+        .GetRequiredService<TransparenciaBotDbContext>();
+
+    var anoJaPossuiGastos = await dbContext.Gastos.AnyAsync(
+        gasto => gasto.Ano == ano);
+
+    if (!anoJaPossuiGastos)
+    {
+        var importador = escopo.ServiceProvider
+            .GetRequiredService<ImportadorGastosCamaraServico>();
+
+        await importador.ImportarAnoAsync(
+            ano,
+            CancellationToken.None);
+    }
+}
 
 if (!app.Environment.IsProduction())
 {
