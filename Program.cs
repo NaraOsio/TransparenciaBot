@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TransparenciaBot.Dados;
 using TransparenciaBot.Servicos;
-
 var builder = WebApplication.CreateBuilder(args);
 
 var portaRender = Environment.GetEnvironmentVariable("PORT");
@@ -17,6 +17,27 @@ var connectionString = builder.Configuration.GetConnectionString(
         "A string de conexão 'TransparenciaBotDb' não foi configurada.");
 
 builder.Services.AddControllers();
+if (Uri.TryCreate(connectionString, UriKind.Absolute, out var urlBanco) &&
+    (urlBanco.Scheme.Equals("postgres", StringComparison.OrdinalIgnoreCase) ||
+     urlBanco.Scheme.Equals("postgresql", StringComparison.OrdinalIgnoreCase)))
+{
+    var credenciais = urlBanco.UserInfo.Split(':', 2);
+
+    if (credenciais.Length != 2)
+    {
+        throw new InvalidOperationException(
+            "A URL do banco da Render está inválida.");
+    }
+
+    connectionString = new NpgsqlConnectionStringBuilder
+    {
+        Host = urlBanco.Host,
+        Port = urlBanco.Port > 0 ? urlBanco.Port : 5432,
+        Database = urlBanco.AbsolutePath.Trim('/'),
+        Username = Uri.UnescapeDataString(credenciais[0]),
+        Password = Uri.UnescapeDataString(credenciais[1])
+    }.ConnectionString;
+}
 
 builder.Services.AddDbContext<TransparenciaBotDbContext>(options =>
     options.UseNpgsql(connectionString));
