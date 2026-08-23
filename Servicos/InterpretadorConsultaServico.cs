@@ -40,7 +40,7 @@ public class InterpretadorConsultaServico
 
         if (gastosDeputado.Success)
         {
-            int? ano = null; 
+            int? ano = null;
 
             if (gastosDeputado.Groups[2].Success)
             {
@@ -52,6 +52,20 @@ public class InterpretadorConsultaServico
                 Tipo = TipoConsultaRegras.GastosDeputado,
                 NomeDeputado = gastosDeputado.Groups[1].Value.Trim(),
                 Ano = ano
+            };
+        }
+
+        var somenteNomeDeputado = Regex.Match(
+            mensagem,
+            @"^[\p{L}]{2,}(?:[\s'-][\p{L}]{2,}){1,4}$",
+            RegexOptions.IgnoreCase);
+
+        if (somenteNomeDeputado.Success)
+        {
+            return new ResultadoInterpretacaoRegras
+            {
+                Tipo = TipoConsultaRegras.DadosDeputado,
+                NomeDeputado = mensagem
             };
         }
 
