@@ -29,7 +29,8 @@ public class InterpretadorConsultaServico
             return new ResultadoInterpretacaoRegras
             {
                 Tipo = TipoConsultaRegras.DadosDeputado,
-                NomeDeputado = dadosDeputado.Groups[1].Value.Trim()
+                NomeDeputado = LimparNomeDeputado(
+                    dadosDeputado.Groups[1].Value)
             };
         }
 
@@ -50,14 +51,15 @@ public class InterpretadorConsultaServico
             return new ResultadoInterpretacaoRegras
             {
                 Tipo = TipoConsultaRegras.GastosDeputado,
-                NomeDeputado = gastosDeputado.Groups[1].Value.Trim(),
+                NomeDeputado = LimparNomeDeputado(
+                    gastosDeputado.Groups[1].Value),
                 Ano = ano
             };
         }
 
         var somenteNomeDeputado = Regex.Match(
             mensagem,
-            @"^[\p{L}]{2,}(?:[\s'-][\p{L}]{2,}){1,4}$",
+            @"^[\p{L}]{2,}(?:[\s'-][\p{L}]{2,}){1,4}(?:\s*\([A-Za-z]{2,10}(?:-[A-Za-z]{2,3})?\)|\s*[-–]\s*[A-Za-z]{2,10}(?:-[A-Za-z]{2,3})?)?$",
             RegexOptions.IgnoreCase);
 
         if (somenteNomeDeputado.Success)
@@ -65,7 +67,7 @@ public class InterpretadorConsultaServico
             return new ResultadoInterpretacaoRegras
             {
                 Tipo = TipoConsultaRegras.ResumoDeputado,
-                NomeDeputado = mensagem
+                NomeDeputado = LimparNomeDeputado(mensagem)
             };
         }
 
@@ -73,6 +75,16 @@ public class InterpretadorConsultaServico
         {
             Tipo = TipoConsultaRegras.NaoIdentificada
         };
+    }
+
+    private static string LimparNomeDeputado(string nome)
+    {
+        var nomeSemPartido = Regex.Replace(
+            nome.Trim(),
+            @"\s*(?:\([A-Za-z]{2,10}(?:-[A-Za-z]{2,3})?\)|[-–]\s*[A-Za-z]{2,10}(?:-[A-Za-z]{2,3})?|\s+[A-Z]{2,5})$",
+            string.Empty);
+
+        return nomeSemPartido.Trim();
     }
 }
 
