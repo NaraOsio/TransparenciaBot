@@ -64,7 +64,7 @@ public class InterpretadorConsultaServico
         {
             return new ResultadoInterpretacaoRegras
             {
-                Tipo = TipoConsultaRegras.DadosDeputado,
+                Tipo = TipoConsultaRegras.ResumoDeputado,
                 NomeDeputado = mensagem
             };
         }
@@ -90,5 +90,6 @@ public enum TipoConsultaRegras
     NaoIdentificada,
     Ajuda,
     DadosDeputado,
-    GastosDeputado
+    GastosDeputado,
+    ResumoDeputado
 }
